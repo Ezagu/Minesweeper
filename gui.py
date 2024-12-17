@@ -18,6 +18,9 @@ class Gui:
         self.ventana.geometry("300x200")
         self.ventana.resizable(False, False)
 
+        self.ventana.wait_visibility()
+        Game.aling_center_root(self.ventana)
+
         self.title = tk.Label(
             self.ventana, text="Minesweeper", font=("Arial", 20), bg=background_color, fg=font_color)
         self.title.pack(pady=25, padx=20)
