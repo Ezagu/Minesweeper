@@ -21,6 +21,33 @@ class BoxConteiner:
         """Return box with the coords"""
         return self.boxes_matrix[x][y]
 
+    def update_mines_around_box(self):
+        """Comprobate if there are mines around the box and put it in a variable in the box"""
+        for j in range(self.size):
+            for i in range(self.size):
+                box: Box = self.get_box(i, j)
+                boxes_around = box.get_around_boxes_list()
+                counter = 0
+                for ind in boxes_around:
+                    box_around: Box = self.get_box(ind[0], ind[1])
+                    if box_around.contains_mine():
+                        counter += 1
+                box.set_mines_around(counter)
+
+    def press_all_around(self, box: Box):
+        """Press all the boxes around the box"""
+        for ind in box.get_around_boxes_list():
+            box_around: Box = self.get_box(ind[0], ind[1])
+            self.press_box_and_comprobate_around(box_around)
+
+    def press_box_and_comprobate_around(self, box: Box):
+        """press the box and press the boxes that has not mines around"""
+        if box.click() and box.get_mines_around() == 0:
+            for ind in box.get_around_boxes_list():
+                box_around: Box = self.get_box(ind[0], ind[1])
+                if box_around.get_mines_around() == 0:
+                    self.press_all_around(box_around)
+
     def __set_boxes_around_box(self, box: Box):
         """Get the index of the around boxes of the box and set it in the box"""
         list_boxes = []
@@ -33,5 +60,5 @@ class BoxConteiner:
                 y = box.get_y() + sum_y
                 if x < 0 or y < 0 or x > self.size - 1 or y > self.size - 1:
                     continue
-                list_boxes.append({x: y})
-        box.set_around_boxes(list_boxes)
+                list_boxes.append((x, y))
+        box.set_around_boxes_list(list_boxes)

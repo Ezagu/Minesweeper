@@ -1,4 +1,5 @@
 """Instantiate a window with the game"""
+import random
 import tkinter as tk
 from box import Box
 from box_conteiner import BoxConteiner
@@ -10,6 +11,7 @@ class Game:
     def __init__(self, option: str):
         """option -> difficulty"""
 
+        # CONFIG
         difficulty_settings = {"Easy": {"size": 10, "mines": 10, "box_width": 4, "box_height": 2},
                                "Medium": {"size": 18, "mines": 40, "box_width": 2, "box_height": 1},
                                "Hard": {"size": 24, "mines": 99, "box_width": 2, "box_height": 1}}
@@ -21,15 +23,20 @@ class Game:
         self.box_width = settings.get("box_width")
         self.box_height = settings.get("box_height")
 
-        self.first_move = True
-
-        self.ventana = tk.Tk()
-        self.ventana.title("Minesweeper")
-        self.ventana.resizable(False, False)
+        # ATRIBUTES
+        self.flags_counter = self.mines
+        self.game_started = False
+        self.boxes_without_mines = []
+        self.index_mines = []
 
         bg_header = "darkgreen"
         fg_header = "white"
         font_header = "Arial, 10"
+
+        # GUI
+        self.ventana = tk.Tk()
+        self.ventana.title("Minesweeper")
+        self.ventana.resizable(False, False)
 
         self.header = tk.Frame(self.ventana, bg=bg_header, height=40)
         self.header.grid(row=0, column=0, sticky="ew")
@@ -42,21 +49,16 @@ class Game:
                                      bg=bg_header, fg=fg_header, font=font_header)
         self.time_counter.pack(side="left", expand=True, padx=10, pady=10)
 
-        self.flags_counter = tk.Label(
-            self.header, text=self.mines, bg=bg_header, fg=fg_header, font=font_header)
-        self.flags_counter.pack(side="right", padx=20, pady=10)
+        self.flags_counter_label = tk.Label(
+            self.header, bg=bg_header, fg=fg_header, font=font_header)
+        self.flags_counter_label.pack(side="right", padx=20, pady=10)
+        self.__update_flag_counter_label()
 
         self.game_frame = tk.Frame(self.ventana, bg="gray")
         self.game_frame.grid(row=1, column=0, sticky="nsew")
 
         self.box_conteiner = BoxConteiner(self.size_matrix)
         self.create_boxes()
-
-        self.generate_random_mines()
-
-    def start(self):
-        """Start the window"""
-        self.ventana.mainloop()
 
     def create_boxes(self):
         "create the box"
@@ -73,18 +75,57 @@ class Game:
         self.ventana.update()
         self.aling_center_root(self.ventana)
 
-    def generate_random_mines(self):
-        """Generate the mines and introduces it to the box"""
-
     def click_box(self, event):
         """Box clicked"""
         box: Box = self.__get_box_with_event(event)
-        box.click()
+        if not self.game_started:
+            self.first_move(box)
+            return
+        self.box_conteiner.press_box_and_comprobate_around(box)
+
+    def first_move(self, box: Box):
+        """The first click in a box, start the game"""
+        self.boxes_without_mines = box.get_around_boxes_list()
+        self.boxes_without_mines.append((box.get_x(), box.get_y()))
+        self.generate_random_mines()
+        self.box_conteiner.press_box_and_comprobate_around(box)
+        self.game_started = True
+
+    def generate_random_mines(self):
+        """Generate the mines and introduces it to the box"""
+        while len(self.index_mines) < self.mines:
+            x = random.randint(0, self.size_matrix - 1)
+            y = random.randint(0, self.size_matrix - 1)
+            index = (x, y)
+            if index not in self.boxes_without_mines and index not in self.index_mines:
+                self.index_mines.append(index)
+        for ind in self.index_mines:
+            box: Box = self.box_conteiner.get_box(ind[0], ind[1])
+            box.put_mine()
+        self.box_conteiner.update_mines_around_box()
 
     def toggle_flag_in_box(self, event):
         """Set flag in the box"""
         box: Box = self.__get_box_with_event(event)
-        box.toggle_flag()
+        is_flag = box.get_flag()
+        if is_flag:
+            box.set_flag(False)
+            self.flags_counter += 1
+        elif self.flags_counter > 0:
+            box.set_flag(True)
+            self.flags_counter -= 1
+        self.__update_flag_counter_label()
+
+    def start_time(self):
+        """Start the time counter"""
+
+    def start(self):
+        """Start the window"""
+        self.ventana.mainloop()
+
+    def __update_flag_counter_label(self):
+        """Update the level of the flags counter"""
+        self.flags_counter_label.config(text=str(self.flags_counter))
 
     def __get_box_with_event(self, event):
         label: tk.Label = event.widget

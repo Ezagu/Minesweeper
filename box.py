@@ -15,7 +15,6 @@ class Box:
         self.pressed = False
 
         self.list_around_boxes = []
-        # self.__get_around_boxes()
 
         self.mines_around = 0
         self.colors = {1: "blue",
@@ -27,26 +26,36 @@ class Box:
                        7: "dark",
                        8: "lightgray"}
 
-    def set_around_boxes(self, list_boxes):
+    def set_around_boxes_list(self, list_boxes):
         """Set the list of the around boxes"""
         self.list_around_boxes = list_boxes
 
-    def get_around_boxes(self):
+    def get_around_boxes_list(self):
         """Return a list with the index of the around boxes"""
         return self.list_around_boxes
 
-    def set_mine(self):
+    def put_mine(self):
         """indicates the box that contains a mine"""
+        self.label.config(bg="orange")
         self.mine = True
 
-    def toggle_flag(self):
-        """toggle the flag"""
+    def set_flag(self, b: bool):
+        """Set the flag"""
         if self.is_pressed():
-            return
-        self.flag = not self.flag
-        self.label.config(bg="red" if self.flag else "lightgray")
+            return False
+        self.flag = b
+        self.label.config(bg="red" if self.get_flag() else "lightgray")
 
-    def is_flag(self):
+    def toggle_flag(self):
+        """toggle the flag and return if change"""
+        if self.is_pressed():
+            return False
+        self.flag = not self.flag
+        self.label.config(bg="red" if self.get_flag() else "lightgray")
+
+        return True
+
+    def get_flag(self):
         """Return if the box contains the flag"""
         return self.flag
 
@@ -55,13 +64,18 @@ class Box:
         return self.mine
 
     def click(self):
-        """Actions when the box is clicked"""
-        if self.is_flag() or self.is_pressed():
-            return
+        """Actions when the box is clicked, return True if it could be pressed"""
+        if self.get_flag() or self.is_pressed():
+            return False
         self.pressed = True
         self.label.config(relief="flat", bg="white")
-        print("coord:", self.x, self.y)
-        print(self.get_around_boxes())
+        if self.get_mines_around() != 0:
+            self.label.config(text=str(self.get_mines_around()),
+                              fg=self.colors[self.get_mines_around()])
+
+        return True
+        # print("coord:", self.x, self.y)
+        # print(self.get_around_boxes())
 
     def is_pressed(self):
         """Return if the box was pressed"""
@@ -74,3 +88,11 @@ class Box:
     def get_y(self):
         """Return the coord y"""
         return self.y
+
+    def set_mines_around(self, mines):
+        """Set how many mines has around"""
+        self.mines_around = mines
+
+    def get_mines_around(self):
+        """Return how many mine there are around the box"""
+        return self.mines_around
