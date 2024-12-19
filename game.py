@@ -1,6 +1,8 @@
 """Instantiate a window with the game"""
+import time
 import random
 import tkinter as tk
+import threading
 from box import Box
 from box_conteiner import BoxConteiner
 
@@ -29,6 +31,7 @@ class Game:
         self.game_started = False
         self.boxes_without_mines = []
         self.index_mines = []
+        self.timer = 0
 
         bg_header = "darkgreen"
         fg_header = "white"
@@ -46,9 +49,10 @@ class Game:
             self.header, text=option, fg=fg_header, bg=bg_header, font=font_header)
         self.label_difficulty.pack(side="left", padx=20, pady=10)
 
-        self.time_counter = tk.Label(self.header, text="00:00",
-                                     bg=bg_header, fg=fg_header, font=font_header)
-        self.time_counter.pack(side="left", expand=True, padx=10, pady=10)
+        self.time_counter_label = tk.Label(self.header, text="00:00",
+                                           bg=bg_header, fg=fg_header, font=font_header)
+        self.time_counter_label.pack(
+            side="left", expand=True, padx=10, pady=10)
 
         self.flags_counter_label = tk.Label(
             self.header, bg=bg_header, fg=fg_header, font=font_header)
@@ -120,6 +124,7 @@ class Game:
         self.boxes_without_mines.append((box.get_x(), box.get_y()))
         self.generate_random_mines()
         self.box_conteiner.press_box_and_comprobate_around(box)
+        self.update_timer()
         self.game_started = True
 
     def generate_random_mines(self):
@@ -147,8 +152,15 @@ class Game:
             self.flags_counter -= 1
         self.__update_flag_counter_label()
 
-    def start_time(self):
+    def update_timer(self):
         """Start the time counter"""
+        if self.game_lose:
+            return
+        self.timer += 1
+        segundos = self.timer % 60
+        minutos = self.timer // 60
+        self.time_counter_label.config(text=f"{minutos}:{segundos:02d}")
+        self.ventana.after(1000, self.update_timer)
 
     def start(self):
         """Start the window"""
