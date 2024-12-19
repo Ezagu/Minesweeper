@@ -1,11 +1,13 @@
+"""This module contains the class Box, which is the class that represents the boxes of the game."""
 import tkinter as tk
 
 
 class Box:
+    """Class that represents the boxes of the game"""
 
     def __init__(self, label: tk.Label, x: int, y: int):
 
-        self.label = label
+        self.label: tk.Label = label
 
         self.x = x
         self.y = y
@@ -36,7 +38,6 @@ class Box:
 
     def put_mine(self):
         """indicates the box that contains a mine"""
-        self.label.config(bg="orange")
         self.mine = True
 
     def set_flag(self, b: bool):
@@ -44,16 +45,8 @@ class Box:
         if self.is_pressed():
             return False
         self.flag = b
-        self.label.config(bg="red" if self.get_flag() else "lightgray")
 
-    def toggle_flag(self):
-        """toggle the flag and return if change"""
-        if self.is_pressed():
-            return False
-        self.flag = not self.flag
-        self.label.config(bg="red" if self.get_flag() else "lightgray")
-
-        return True
+        self.label.config(bg="indianred" if b else "lightgray")
 
     def get_flag(self):
         """Return if the box contains the flag"""
@@ -64,18 +57,20 @@ class Box:
         return self.mine
 
     def click(self):
-        """Actions when the box is clicked, return True if it could be pressed"""
+        """Press the box"""
         if self.get_flag() or self.is_pressed():
             return False
         self.pressed = True
-        self.label.config(relief="flat", bg="white")
+        self.label.config(relief="flat")
+        if self.contains_mine():
+            self.label.config(text="*")
+        else:
+            self.label.config(bg="white")
         if self.get_mines_around() != 0:
             self.label.config(text=str(self.get_mines_around()),
                               fg=self.colors[self.get_mines_around()])
 
         return True
-        # print("coord:", self.x, self.y)
-        # print(self.get_around_boxes())
 
     def is_pressed(self):
         """Return if the box was pressed"""

@@ -25,6 +25,7 @@ class Game:
 
         # ATRIBUTES
         self.flags_counter = self.mines
+        self.game_lose = False
         self.game_started = False
         self.boxes_without_mines = []
         self.index_mines = []
@@ -62,14 +63,15 @@ class Game:
 
     def create_boxes(self):
         "create the box"
+
         for y in range(self.size_matrix):
             for x in range(self.size_matrix):
                 label = tk.Label(self.game_frame,
                                  width=self.box_width, height=self.box_height, borderwidth=2,
                                  relief="ridge", bg="lightgray")
-                label.grid(row=y, column=x, padx=1, pady=1)
                 label.bind("<Button-1>", self.click_box)
                 label.bind("<Button-3>", self.toggle_flag_in_box)
+                label.grid(row=y, column=x, padx=1, pady=1)
                 box = Box(label, x, y)
                 self.box_conteiner.add_box(box)
         self.ventana.update()
@@ -77,11 +79,40 @@ class Game:
 
     def click_box(self, event):
         """Box clicked"""
+        if self.game_lose:
+            return
+
         box: Box = self.__get_box_with_event(event)
+
+        if box.contains_mine():
+            # LOSE
+            box.label.config(bg="red")
+            self.game_over()
+
         if not self.game_started:
+            # First move
             self.first_move(box)
             return
-        self.box_conteiner.press_box_and_comprobate_around(box)
+
+        if box.is_pressed():
+            # Box already pressed
+            if self.box_conteiner.get_flags_around_box(box) == box.get_mines_around():
+                if self.box_conteiner.all_mines_around_with_flag(box):
+                    self.box_conteiner.press_all_around(box)
+                else:
+                    for ind in box.get_around_boxes_list():
+                        box_around: Box = self.box_conteiner.get_box(
+                            ind[0], ind[1])
+                        if box_around.contains_mine() and not box_around.get_flag():
+                            box_around.label.config(bg="red")
+                    self.game_over()
+        else:
+            # Press the box
+            self.box_conteiner.press_box_and_comprobate_around(box)
+
+        if self.box_conteiner.how_many_unpressed_boxes() == self.mines:
+            # WIN
+            self.win_toplevel()
 
     def first_move(self, box: Box):
         """The first click in a box, start the game"""
@@ -122,6 +153,15 @@ class Game:
     def start(self):
         """Start the window"""
         self.ventana.mainloop()
+
+    def win_toplevel(self):
+        """Win the game"""
+        print("You win")
+
+    def game_over(self):
+        """Lose the game"""
+        self.game_lose = True
+        self.box_conteiner.press_all_mines()
 
     def __update_flag_counter_label(self):
         """Update the level of the flags counter"""
