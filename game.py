@@ -1,8 +1,6 @@
 """Instantiate a window with the game"""
-import time
 import random
 import tkinter as tk
-import threading
 from box import Box
 from box_conteiner import BoxConteiner
 
@@ -13,29 +11,31 @@ class Game:
     def __init__(self, option: str):
         """option -> difficulty"""
 
+        self.difficulty = option
+
         # CONFIG
         difficulty_settings = {"Easy": {"size": 10, "mines": 10, "box_width": 4, "box_height": 2},
                                "Medium": {"size": 18, "mines": 40, "box_width": 2, "box_height": 1},
                                "Hard": {"size": 24, "mines": 99, "box_width": 2, "box_height": 1}}
 
-        settings = difficulty_settings.get(option)
-
-        self.size_matrix = settings.get("size")
-        self.mines = settings.get("mines")
-        self.box_width = settings.get("box_width")
-        self.box_height = settings.get("box_height")
-
-        # ATRIBUTES
-        self.flags_counter = self.mines
-        self.game_lose = False
-        self.game_started = False
-        self.boxes_without_mines = []
-        self.index_mines = []
-        self.timer = 0
+        settings = difficulty_settings.get(self.difficulty)
 
         bg_header = "darkgreen"
         fg_header = "white"
         font_header = "Arial, 10"
+
+        # ATRIBUTES
+        self.size_matrix = settings.get("size")
+        self.mines = settings.get("mines")
+        self.box_width = settings.get("box_width")
+        self.box_height = settings.get("box_height")
+        self.flags_counter = self.mines
+        self.game_lose = False
+        self.game_win = False
+        self.game_started = False
+        self.boxes_without_mines = []
+        self.index_mines = []
+        self.timer = 0
 
         # GUI
         self.ventana = tk.Tk()
@@ -88,7 +88,10 @@ class Game:
 
         box: Box = self.__get_box_with_event(event)
 
-        if box.contains_mine():
+        print("contains mine:", box.contains_mine())
+        print("contains flag:", )
+
+        if box.contains_mine() and not box.get_flag():
             # LOSE
             box.label.config(bg="red")
             self.game_over()
@@ -116,7 +119,7 @@ class Game:
 
         if self.box_conteiner.how_many_unpressed_boxes() == self.mines:
             # WIN
-            self.win_toplevel()
+            self.win()
 
     def first_move(self, box: Box):
         """The first click in a box, start the game"""
@@ -154,26 +157,86 @@ class Game:
 
     def update_timer(self):
         """Start the time counter"""
-        if self.game_lose:
+        if self.game_lose or self.game_win:
             return
+        self.ventana.after(1000, self.update_timer)
         self.timer += 1
+        self.time_counter_label.config(text=self.get_time())
+
+    def get_time(self):
+        "Return a string of the time in minutes and seconds"
         segundos = self.timer % 60
         minutos = self.timer // 60
-        self.time_counter_label.config(text=f"{minutos}:{segundos:02d}")
-        self.ventana.after(1000, self.update_timer)
+        return f"{minutos}:{segundos:02d}"
 
     def start(self):
         """Start the window"""
         self.ventana.mainloop()
 
-    def win_toplevel(self):
-        """Win the game"""
-        print("You win")
+    def toplevel(self):
+        """Show top level when the game is over"""
+
+        top_level = tk.Toplevel(self.ventana)
+        # top_level.geometry("300x200")
+        top_level.resizable(False, False)
+        top_level.title("Win")
+        top_level.configure(bg="gray22")
+
+        label_congrats = tk.Label(
+            top_level, text="Congrats! You win" if self.game_win else "You lose",
+            font="Arial 14 bold", fg="white", bg="gray22")
+        label_congrats.pack(pady=15)
+
+        if self.game_win:
+            label_time = tk.Label(
+                top_level, text=self.get_time(), font="12", fg="white", bg="gray22")
+            label_time.pack()
+
+        buttons_frame = tk.Frame(top_level, bg="gray22")
+        buttons_frame.pack(pady=10, padx=20)
+
+        reset_button = tk.Button(
+            buttons_frame, command=self.reset_game, text="Reset")
+        reset_button.pack(side="left", padx=5)
+
+        menu_button = tk.Button(
+            buttons_frame, command=self.to_menu, text="Menu")
+        menu_button.pack(side="left", padx=5)
+
+        quit_button = tk.Button(
+            buttons_frame, command=self.quit, text="Quit")
+        quit_button.pack(side="left", padx=5)
+
+        top_level.wait_visibility()
+        self.aling_center_root(top_level)
+
+    def reset_game(self):
+        """Reset the game"""
+        self.ventana.destroy()
+        new_game = Game(self.difficulty)
+        new_game.start()
+
+    def to_menu(self):
+        """Go to the menu and close the game"""
+        self.ventana.destroy()
+        from gui import Gui
+        menu = Gui()
+        menu.start()
+
+    def quit(self):
+        """Quit the game"""
+        self.ventana.destroy()
 
     def game_over(self):
         """Lose the game"""
         self.game_lose = True
         self.box_conteiner.press_all_mines()
+        self.toplevel()
+
+    def win(self):
+        """Win the game"""
+        self.game_win = True
+        self.toplevel()
 
     def __update_flag_counter_label(self):
         """Update the level of the flags counter"""
