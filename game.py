@@ -3,6 +3,7 @@ import random
 import tkinter as tk
 from box import Box
 from box_conteiner import BoxConteiner
+from record_manager import RecordManager
 
 
 class Game:
@@ -37,6 +38,9 @@ class Game:
         self.index_mines = []
         self.timer = 0
 
+        self.box_conteiner = BoxConteiner(self.size_matrix)
+        self.record_manager = RecordManager()
+
         # GUI
         self.ventana = tk.Tk()
         self.ventana.title("Minesweeper")
@@ -62,8 +66,10 @@ class Game:
         self.game_frame = tk.Frame(self.ventana, bg="gray")
         self.game_frame.grid(row=1, column=0, sticky="nsew")
 
-        self.box_conteiner = BoxConteiner(self.size_matrix)
         self.create_boxes()
+
+        self.ventana.wait_visibility()
+        self.aling_center_root(self.ventana)
 
     def create_boxes(self):
         "create the box"
@@ -78,23 +84,19 @@ class Game:
                 label.grid(row=y, column=x, padx=1, pady=1)
                 box = Box(label, x, y)
                 self.box_conteiner.add_box(box)
-        self.ventana.update()
-        self.aling_center_root(self.ventana)
 
     def click_box(self, event):
         """Box clicked"""
-        if self.game_lose:
+        if self.game_lose or self.game_win:
             return
 
         box: Box = self.__get_box_with_event(event)
-
-        print("contains mine:", box.contains_mine())
-        print("contains flag:", )
 
         if box.contains_mine() and not box.get_flag():
             # LOSE
             box.label.config(bg="red")
             self.game_over()
+            return
 
         if not self.game_started:
             # First move
@@ -146,6 +148,10 @@ class Game:
     def toggle_flag_in_box(self, event):
         """Set flag in the box"""
         box: Box = self.__get_box_with_event(event)
+
+        if box.is_pressed():
+            return
+
         is_flag = box.get_flag()
         if is_flag:
             box.set_flag(False)
@@ -161,13 +167,8 @@ class Game:
             return
         self.ventana.after(1000, self.update_timer)
         self.timer += 1
-        self.time_counter_label.config(text=self.get_time())
-
-    def get_time(self):
-        "Return a string of the time in minutes and seconds"
-        segundos = self.timer % 60
-        minutos = self.timer // 60
-        return f"{minutos}:{segundos:02d}"
+        minutes_seconds = self.seconds_to_minutes_seconds(self.timer)
+        self.time_counter_label.config(text=minutes_seconds)
 
     def start(self):
         """Start the window"""
@@ -177,20 +178,39 @@ class Game:
         """Show top level when the game is over"""
 
         top_level = tk.Toplevel(self.ventana)
-        # top_level.geometry("300x200")
         top_level.resizable(False, False)
         top_level.title("Win")
         top_level.configure(bg="gray22")
 
         label_congrats = tk.Label(
             top_level, text="Congrats! You win" if self.game_win else "You lose",
-            font="Arial 14 bold", fg="white", bg="gray22")
-        label_congrats.pack(pady=15)
+            font="Arial 16 bold", fg="white", bg="gray22")
+        label_congrats.pack(pady=15, padx=20)
 
         if self.game_win:
-            label_time = tk.Label(
-                top_level, text=self.get_time(), font="12", fg="white", bg="gray22")
-            label_time.pack()
+
+            time_formated = self.seconds_to_minutes_seconds(self.timer)
+            time_label = tk.Label(
+                top_level, text=time_formated, fg="white", bg="gray22", font="12")
+
+            record = int(
+                self.record_manager.get_record_in_difficulty(self.difficulty))
+            if self.timer < record or record == 0:
+                record_label = tk.Label(
+                    top_level, text="New record!", fg="yellow", bg="gray22", font="Arial 14 bold")
+                record_label.pack()
+                self.record_manager.set_record_with_difficulty(
+                    self.difficulty, str(self.timer))
+
+                time_label.pack()
+
+                if record != 0:
+                    previous_record = tk.Label(
+                        top_level, fg="lightgray", bg="gray22", font="Arial 8 italic",
+                        text=f"previous record: {self.seconds_to_minutes_seconds(record)}")
+                    previous_record.pack()
+
+            time_label.pack()
 
         buttons_frame = tk.Frame(top_level, bg="gray22")
         buttons_frame.pack(pady=10, padx=20)
@@ -250,6 +270,13 @@ class Game:
         return box
 
     @staticmethod
+    def seconds_to_minutes_seconds(seconds):
+        "Receive seconds and return minutes-seconds format --:--"
+        s = seconds % 60
+        m = seconds // 60
+        return f"{m}:{s:02d}"
+
+    @ staticmethod
     def aling_center_root(root: tk.Tk):
         """Centar the root"""
         width_root = root.winfo_width()
