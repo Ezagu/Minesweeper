@@ -73,7 +73,6 @@ class Game:
 
     def create_boxes(self):
         "create the box"
-
         for y in range(self.size_matrix):
             for x in range(self.size_matrix):
                 label = tk.Label(self.game_frame,
@@ -179,7 +178,7 @@ class Game:
 
         top_level = tk.Toplevel(self.ventana)
         top_level.resizable(False, False)
-        top_level.title("Win")
+        top_level.title("Game over")
         top_level.configure(bg="gray22")
 
         label_congrats = tk.Label(
